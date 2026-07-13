@@ -5,7 +5,7 @@
 [![Pandas](https://img.shields.io/badge/Pandas-150458?style=flat-square&logo=pandas&logoColor=white)](https://pandas.pydata.org/)
 [![NumPy](https://img.shields.io/badge/NumPy-013243?style=flat-square&logo=numpy&logoColor=white)](https://numpy.org/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
-[![Google Colab](https://img.shields.io/badge/Google_Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](https://colab.research.google.com/)
+[![Google Colab](https://img.shields.io/badge/Google_Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](https://colab.research.google.com/drive/1x6hQCVz84bRbhb_fwgpOGYOx5ohdajOi?usp=sharing)
 
 Dự án cuối kỳ môn Nhập môn phân tích dữ liệu và học sâu thực hiện bài toán phân tích dữ liệu nhân sự (HR Analytics) và xây dựng mô hình mạng nơ-ron nhân tạo MLP (Multi-Layer Perceptron) để dự đoán nguy cơ nghỉ việc chủ động (Attrition) của nhân viên dựa trên bộ dữ liệu IBM HR Analytics.
 
@@ -68,30 +68,15 @@ Sau khi quét tìm ngưỡng tối ưu F1-Score trên tập Validation, ngưỡn
 
 ## Cấu Trúc Thư Mục
 
-*   `WA_Fn-UseC_-HR-Employee-Attrition.csv` - File dữ liệu đầu vào.
-*   `DoAn_HR_Attrition.py` - Script chính thực hiện quy trình từ EDA, huấn luyện đến đánh giá.
-*   `Output/Final/` - Thư mục lưu trữ kết quả đầu ra:
-    *   `best_model.pth` - Trọng số mô hình tốt nhất lưu ở epoch 22.
-    *   `eda_plots.png` - Biểu đồ phân tích khám phá dữ liệu.
-    *   `correlation_matrix.png` - Heatmap ma trận tương quan.
-    *   `correlation_with_attrition.png` - Tương quan các biến với Attrition.
-    *   `training_history.png` - Đồ thị lịch sử huấn luyện.
-    *   `test_evaluation.png` - Các đồ thị ma trận nhầm lẫn, ROC, PR và phân tích ngưỡng.
-    *   `feature_importance.png` - Độ quan trọng đặc trưng bằng phương pháp Permutation Importance.
-    *   `mlp_architecture.png` - Sơ đồ kiến trúc mạng MLP đầu đề xuất.
-*   `pipeline_flowchart.png` - Sơ đồ quy trình hệ thống.
-*   `BaoCao_HR_Attrition_HoanThien.docx` - Báo cáo đồ án hoàn chỉnh.
+*   `WA_Fn-UseC_-HR-Employee-Attrition.csv` - File dữ liệu đầu vào (IBM HR Analytics Dataset).
+*   `HRAnalyst.ipynb` - Notebook Google Colab thực hiện toàn bộ quy trình: phân tích khám phá dữ liệu (EDA), tiền xử lý, feature engineering, huấn luyện mạng MLP và đánh giá mô hình.
+*   `README.md` - Hướng dẫn sử dụng và thông tin đồ án.
 
 ---
 
 ## Hướng Dẫn Chạy Chương Trình
 
-1.  Cài đặt các thư viện cần thiết:
-    ```bash
-    pip install torch pandas numpy matplotlib seaborn scikit-learn imbalanced-learn
-    ```
-2.  Đặt file dữ liệu `WA_Fn-UseC_-HR-Employee-Attrition.csv` cùng thư mục với script chạy.
-3.  Chạy script huấn luyện và đánh giá:
-    ```bash
-    python DoAn_HR_Attrition.py
-    ```
+1.  Mở notebook trực tiếp trên Google Colab qua liên kết sau:
+    [Google Colab Notebook](https://colab.research.google.com/drive/1x6hQCVz84bRbhb_fwgpOGYOx5ohdajOi?usp=sharing)
+2.  Tải file dữ liệu `WA_Fn-UseC_-HR-Employee-Attrition.csv` lên thư mục làm việc của Google Colab.
+3.  Chạy tuần tự các Cell trong notebook để thực hiện tiền xử lý dữ liệu, huấn luyện mạng MLP và hiển thị các đồ thị đánh giá.

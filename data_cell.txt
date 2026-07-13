@@ -1,0 +1,330 @@
+# CELL 0
+# -*- coding: utf-8 -*-
+# %% [markdown]
+# # ĐỒ ÁN: DỰ ĐOÁN NGUY CƠ NGHỈ VIỆC CỦA NHÂN VIÊN
+# ## Phân tích dữ liệu nhân sự (HR Analyst) bằng PyTorch
+
+# %% ============================
+# CELL 1: IMPORT THƯ VIỆN
+# ============================
+import pandas as pd
+import numpy as np
+import matplotlib.pyplot as plt
+import seaborn as sns
+import warnings
+warnings.filterwarnings('ignore')
+
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score, f1_score,
+    fbeta_score, confusion_matrix, classification_report,
+    roc_auc_score, roc_curve, precision_recall_curve, average_precision_score
+)
+
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from torch.utils.data import Dataset, DataLoader
+
+import time
+import copy
+
+RANDOM_STATE = 42
+np.random.seed(RANDOM_STATE)
+torch.manual_seed(RANDOM_STATE)
+if torch.cuda.is_available():
+    torch.cuda.manual_seed_all(RANDOM_STATE)
+
+device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+print(f"PyTorch version: {torch.__version__}")
+print(f"Device: {device}")
+if device.type == 'cuda':
+    print(f"GPU: {torch.cuda.get_device_name(0)}")
+
+plt.rcParams['figure.figsize'] = (12, 6)
+plt.rcParams['font.size'] = 12
+sns.set_style('whitegrid')
+print("\n Import thư viện thành công!")
+
+# CELL 1
+# %% ============================
+# CELL 2: ĐỌC VÀ TÌM HIỂU DỮ LIỆU
+# ============================
+# *** BƯỚC 1: Download dataset, tìm hiểu về dữ liệu ***
+
+# --- Trên Google Colab: Upload file CSV ---
+# from google.colab import files
+# uploaded = files.upload()
+# filepath = 'WA_Fn-UseC_-HR-Employee-Attrition.csv'
+
+# --- Trên máy local ---
+filepath = 'WA_Fn-UseC_-HR-Employee-Attrition.csv'
+
+df = pd.read_csv(filepath)
+
+print("=" * 65)
+print("BƯỚC 1: TÌM HIỂU VỀ DỮ LIỆU")
+print("=" * 65)
+print(f"\nKích thước dữ liệu: {df.shape[0]} dòng × {df.shape[1]} cột")
+print("\n--- 5 dòng đầu tiên ---")
+df.head()
+
+# CELL 2
+# %% ============================
+# CELL 3: PHÂN TÍCH DỮ LIỆU SƠ BỘ (EDA)
+# ============================
+print("=" * 65)
+print("PHÂN TÍCH DỮ LIỆU SƠ BỘ (EDA)")
+print("=" * 65)
+
+print("\n--- Thông tin kiểu dữ liệu ---")
+print(df.dtypes)
+print(f"\n--- Kiểm tra giá trị thiếu ---")
+missing = df.isnull().sum()
+if missing.sum() == 0:
+    print(" Không có giá trị thiếu (Missing Values) trong dữ liệu!")
+else:
+    print(missing[missing > 0])
+
+print(f"\n--- Thống kê mô tả (biến số) ---")
+df.describe().T
+
+# CELL 3
+# %% ============================
+# CELL 4: PHÂN TÍCH BIẾN MỤC TIÊU
+# ============================
+print("=" * 65)
+print("PHÂN BỐ BIẾN MỤC TIÊU - ATTRITION")
+print("=" * 65)
+
+attrition_counts = df['Attrition'].value_counts()
+attrition_pct = df['Attrition'].value_counts(normalize=True) * 100
+print(f"\n  No  (Không nghỉ): {attrition_counts['No']:>5} ({attrition_pct['No']:.1f}%)")
+print(f"  Yes (Nghỉ việc) : {attrition_counts['Yes']:>5} ({attrition_pct['Yes']:.1f}%)")
+print(f"\n  Dữ liệu mất cân bằng! Tỷ lệ nghỉ việc chỉ ~{attrition_pct['Yes']:.0f}%")
+
+print(f"\n--- Các cột cần loại bỏ ---")
+constant_cols = [col for col in df.columns if df[col].nunique() == 1]
+for col in constant_cols:
+    print(f"   {col} = '{df[col].unique()[0]}' (giá trị hằng)")
+print(f"   EmployeeNumber = ID nhân viên")
+print(f"   DailyRate, HourlyRate, MonthlyRate = Nhiễu (|r| < 0.02)")
+
+cat_cols = df.select_dtypes(include=['object']).columns.tolist()
+num_cols = df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+print(f"\nSố cột phân loại: {len(cat_cols)}")
+print(f"Số cột số: {len(num_cols)}")
+print(f"\nCác cột phân loại:")
+for col in cat_cols:
+    print(f"   {col}: {df[col].nunique()} giá trị - {list(df[col].unique())}")
+
+# CELL 4
+# %% ============================
+# CELL 5: TRỰC QUAN HÓA DỮ LIỆU
+# ============================
+fig, axes = plt.subplots(2, 3, figsize=(20, 12))
+fig.suptitle('TRỰC QUAN HÓA DỮ LIỆU - HR Employee Attrition',
+             fontsize=18, fontweight='bold', y=1.02)
+
+colors = ['#27ae60', '#e74c3c']
+colors_palette = {'No': '#27ae60', 'Yes': '#e74c3c'}
+
+attrition_counts = df['Attrition'].value_counts()
+axes[0, 0].pie(attrition_counts.values, labels=['Không nghỉ (No)', 'Nghỉ việc (Yes)'],
+               autopct='%1.1f%%', colors=colors, startangle=90,
+               explode=(0, 0.08), textprops={'fontsize': 12}, shadow=True)
+axes[0, 0].set_title('Tỷ lệ Nghỉ việc (Attrition)', fontsize=13, fontweight='bold')
+
+for label, color in zip(['No', 'Yes'], colors):
+    subset = df[df['Attrition'] == label]['Age']
+    axes[0, 1].hist(subset, bins=20, alpha=0.7, label=f'Attrition={label}',
+                    color=color, edgecolor='white')
+axes[0, 1].set_title('Phân bố Tuổi theo Attrition', fontsize=13, fontweight='bold')
+axes[0, 1].set_xlabel('Tuổi')
+axes[0, 1].set_ylabel('Số lượng')
+axes[0, 1].legend()
+
+sns.boxplot(data=df, x='Attrition', y='MonthlyIncome', palette=colors_palette, ax=axes[0, 2])
+axes[0, 2].set_title('Thu nhập hàng tháng theo Attrition', fontsize=13, fontweight='bold')
+
+overtime_attrition = pd.crosstab(df['OverTime'], df['Attrition'], normalize='index') * 100
+overtime_attrition.plot(kind='bar', ax=axes[1, 0], color=colors, edgecolor='white', width=0.6)
+axes[1, 0].set_title('Tỷ lệ Attrition theo OverTime', fontsize=13, fontweight='bold')
+axes[1, 0].set_xlabel('Tăng ca (OverTime)')
+axes[1, 0].set_ylabel('Tỷ lệ (%)')
+axes[1, 0].legend(title='Attrition')
+axes[1, 0].tick_params(axis='x', rotation=0)
+
+sns.boxplot(data=df, x='Attrition', y='YearsAtCompany', palette=colors_palette, ax=axes[1, 1])
+axes[1, 1].set_title('Số năm tại công ty theo Attrition', fontsize=13, fontweight='bold')
+
+job_sat = pd.crosstab(df['JobSatisfaction'], df['Attrition'], normalize='columns') * 100
+job_sat.plot(kind='bar', ax=axes[1, 2], color=colors, edgecolor='white', width=0.6)
+axes[1, 2].set_title('Mức độ hài lòng công việc theo Attrition', fontsize=13, fontweight='bold')
+axes[1, 2].set_xlabel('JobSatisfaction (1=Thấp  4=Cao)')
+axes[1, 2].set_ylabel('Tỷ lệ (%)')
+axes[1, 2].legend(title='Attrition')
+axes[1, 2].tick_params(axis='x', rotation=0)
+
+plt.tight_layout()
+plt.savefig('eda_plots.png', dpi=150, bbox_inches='tight')
+plt.show()
+print(" Đã lưu 'eda_plots.png'")
+
+# CELL 5
+# %% ============================
+# CELL 6: PHÂN TÍCH TƯƠNG QUAN
+# ============================
+print("=" * 65)
+print("TƯƠNG QUAN CỦA CÁC ĐẶC TRƯNG VỚI ATTRITION")
+print("=" * 65)
+
+df_corr = df.copy()
+df_corr['Attrition'] = df_corr['Attrition'].map({'Yes': 1, 'No': 0})
+df_corr['OverTime'] = df_corr['OverTime'].map({'Yes': 1, 'No': 0})
+df_corr['Gender'] = df_corr['Gender'].map({'Male': 1, 'Female': 0})
+
+cols_exclude = ['EmployeeCount', 'StandardHours', 'EmployeeNumber']
+numeric_cols_corr = [c for c in df_corr.select_dtypes(include=[np.number]).columns
+                     if c not in cols_exclude]
+corr_matrix = df_corr[numeric_cols_corr].corr()
+attrition_corr = corr_matrix['Attrition'].drop('Attrition').sort_values()
+
+print("\nTop 10 tương quan dương (tăng nguy cơ nghỉ):")
+for feat, val in attrition_corr.sort_values(ascending=False).head(10).items():
+    print(f"  {feat:<28} {val:>+.4f} {'' * int(abs(val) * 50)}")
+print("\nTop 10 tương quan âm (giảm nguy cơ nghỉ):")
+for feat, val in attrition_corr.head(10).items():
+    print(f"  {feat:<28} {val:>+.4f} {'' * int(abs(val) * 50)}")
+
+# Biểu đồ thanh tương quan
+fig, ax = plt.subplots(figsize=(10, 10))
+bar_colors = ['#e74c3c' if v > 0 else '#3498db' for v in attrition_corr.values]
+ax.barh(range(len(attrition_corr)), attrition_corr.values,
+        color=bar_colors, edgecolor='white', height=0.7)
+ax.set_yticks(range(len(attrition_corr)))
+ax.set_yticklabels(attrition_corr.index, fontsize=10)
+ax.set_xlabel('Hệ số tương quan Pearson', fontsize=12)
+ax.set_title('Tương quan của từng Đặc trưng với Attrition\n(Đỏ = Tăng nguy cơ, Xanh = Giảm nguy cơ)',
+             fontsize=14, fontweight='bold')
+ax.axvline(x=0, color='black', linewidth=0.8)
+ax.grid(axis='x', alpha=0.3)
+plt.tight_layout()
+plt.savefig('correlation_with_attrition.png', dpi=150, bbox_inches='tight')
+plt.show()
+
+# Heatmap top 15
+top_n_corr = 15
+top_corr_features = attrition_corr.abs().sort_values(ascending=False).head(top_n_corr).index.tolist()
+top_corr_features = ['Attrition'] + top_corr_features
+corr_selected = df_corr[top_corr_features].corr()
+
+plt.figure(figsize=(12, 10))
+mask = np.triu(np.ones_like(corr_selected, dtype=bool))
+sns.heatmap(corr_selected, mask=mask, annot=True, fmt='.2f', cmap='RdBu_r',
+            center=0, square=True, linewidths=0.5, annot_kws={'size': 9},
+            vmin=-1, vmax=1)
+plt.title(f'Ma trận Tương quan - Top {top_n_corr} đặc trưng liên quan Attrition nhất',
+          fontsize=14, fontweight='bold')
+plt.xticks(rotation=45, ha='right', fontsize=9)
+plt.yticks(fontsize=9)
+plt.tight_layout()
+plt.savefig('correlation_matrix.png', dpi=150, bbox_inches='tight')
+plt.show()
+print(" Đã lưu biểu đồ tương quan")
+
+# CELL 6
+# %% ============================
+# CELL 7: FEATURE ENGINEERING + TIỀN XỬ LÝ
+# ============================
+print("=" * 65)
+print("BƯỚC 2 (phần 1): FEATURE ENGINEERING + TIỀN XỬ LÝ")
+print("=" * 65)
+
+df_processed = df.copy()
+
+# 1. Loại bỏ cột không cần thiết + biến nhiễu
+cols_to_drop = ['EmployeeCount', 'Over18', 'StandardHours', 'EmployeeNumber',
+                'DailyRate', 'HourlyRate', 'MonthlyRate']
+df_processed.drop(columns=cols_to_drop, inplace=True)
+print(f"\n Loại bỏ {len(cols_to_drop)} cột: {cols_to_drop}")
+
+# 2. Mã hóa biến mục tiêu
+df_processed['Attrition'] = df_processed['Attrition'].map({'Yes': 1, 'No': 0})
+
+# 3. Feature Engineering - 3 biến mới
+print(f"\n--- Feature Engineering ---")
+df_processed['CompanyLoyalty'] = (
+    df_processed['YearsAtCompany'] / (df_processed['TotalWorkingYears'] + 1)
+)
+print(f"   CompanyLoyalty = YearsAtCompany / (TotalWorkingYears + 1)")
+
+df_processed['PromotionStagnation'] = (
+    df_processed['YearsSinceLastPromotion'] / (df_processed['YearsAtCompany'] + 1)
+)
+print(f"   PromotionStagnation = YearsSinceLastPromotion / (YearsAtCompany + 1)")
+
+df_processed['IncomePerYear'] = (
+    df_processed['MonthlyIncome'] / (df_processed['TotalWorkingYears'] + 1)
+)
+print(f"   IncomePerYear = MonthlyIncome / (TotalWorkingYears + 1)")
+
+new_features = ['CompanyLoyalty', 'PromotionStagnation', 'IncomePerYear']
+
+# 4. Tách X, y
+y = df_processed['Attrition'].values
+X_df = df_processed.drop(columns=['Attrition'])
+
+cat_columns = X_df.select_dtypes(include=['object']).columns.tolist()
+num_columns = X_df.select_dtypes(include=['int64', 'float64']).columns.tolist()
+
+# 5. One-Hot Encoding
+X_encoded = pd.get_dummies(X_df, columns=cat_columns, drop_first=True)
+feature_names = X_encoded.columns.tolist()
+X = X_encoded.values.astype(np.float32)
+y = y.astype(np.float32)
+
+print(f"\n Sau One-Hot Encoding: {X.shape[1]} đặc trưng")
+
+# CELL 7
+# %% ============================
+# CELL 8: CHIA DỮ LIỆU + CHUẨN HÓA
+# ============================
+# *** BƯỚC 2: Chia Train (70%), Val (15%), Test (15%) - Phân tầng ***
+
+print("=" * 65)
+print("BƯỚC 2 (phần 2): CHIA DỮ LIỆU + CHUẨN HÓA")
+print("=" * 65)
+
+X_train, X_temp, y_train, y_temp = train_test_split(
+    X, y, test_size=0.30, random_state=RANDOM_STATE, stratify=y
+)
+X_val, X_test, y_val, y_test = train_test_split(
+    X_temp, y_temp, test_size=0.50, random_state=RANDOM_STATE, stratify=y_temp
+)
+
+# Chuẩn hóa - fit trên Train ONLY
+num_col_indices = [feature_names.index(c) for c in num_columns if c in feature_names]
+scaler = StandardScaler()
+X_train[:, num_col_indices] = scaler.fit_transform(X_train[:, num_col_indices])
+X_val[:, num_col_indices] = scaler.transform(X_val[:, num_col_indices])
+X_test[:, num_col_indices] = scaler.transform(X_test[:, num_col_indices])
+
+# Lưu lại bản gốc (chưa SMOTE) để ĐO ĐIỂM (giúp biểu đồ khớp hoàn toàn với tập Val)
+X_train_real = X_train.copy()
+y_train_real = y_train.copy()
+
+print(f"\n Chia phân tầng (stratified):")
+print(f"  Train:      {len(y_train)} mẫu ({len(y_train)/len(y)*100:.0f}%)")
+print(f"  Validation: {len(y_val)} mẫu ({len(y_val)/len(y)*100:.0f}%)")
+print(f"  Test:       {len(y_test)} mẫu ({len(y_test)/len(y)*100:.0f}%)")
+print(f"  StandardScaler fit trên Train only ")
+
+print(f"\n{'Tập':<12} {'Tổng':>6} {'AT=0':>6} {'AT=1':>6} {'%AT=1':>8}")
+print("-" * 42)
+for name, y_set in [('Train', y_train), ('Validation', y_val), ('Test', y_test)]:
+    n = len(y_set)
+    n_pos = int(y_set.sum())
+    print(f"  {name:<10} {n:>6} {n - n_pos:>6} {n_pos:>6} {n_pos/n*100:>7.1f}%")
+

@@ -7,12 +7,13 @@
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?style=flat-square&logo=scikit-learn&logoColor=white)](https://scikit-learn.org/)
 [![Google Colab](https://img.shields.io/badge/Google_Colab-F9AB00?style=flat-square&logo=googlecolab&logoColor=white)](https://colab.research.google.com/)
 
-Dự án cuối kỳ môn Phân tích dữ liệu và Học sâu thực hiện bài toán phân tích dữ liệu nhân sự (HR Analytics) và xây dựng mô hình mạng nơ-ron nhân tạo MLP (Multi-Layer Perceptron) để dự đoán nguy cơ nghỉ việc chủ động (Attrition) của nhân viên dựa trên bộ dữ liệu IBM HR Analytics.
+Dự án cuối kỳ môn Nhập môn phân tích dữ liệu và học sâu thực hiện bài toán phân tích dữ liệu nhân sự (HR Analytics) và xây dựng mô hình mạng nơ-ron nhân tạo MLP (Multi-Layer Perceptron) để dự đoán nguy cơ nghỉ việc chủ động (Attrition) của nhân viên dựa trên bộ dữ liệu IBM HR Analytics.
 
 ---
 
 ## Thông Tin Đồ Án
 
+*   **Môn học:** Nhập môn phân tích dữ liệu và học sâu
 *   **Lớp học phần (LHP):** 253_71ITDS30203_0203
 *   **Giảng viên hướng dẫn (GVHD):** ThS. Nguyễn Thị Mỹ Linh
 *   **Sinh viên thực hiện 1:** Nguyễn Đình Huy (MSSV: 2474802010140)
